@@ -94,17 +94,26 @@ class DotBuilder extends BuilderSupport {
     String getDotString() {
         outTarget
     }
-    
+
+    private static final List DOT_EXECUTABLES = ['dot', '/usr/local/bin/dot']
+
     byte[] createDiagram(String outputFormat) {
         String dot = dotString
         log.debug "Graphviz dot:\n"+dot  
         def p
-        try {
-            def dotExe = config.graphviz.dot.executable
-            p = (dotExe+" -T"+outputFormat).execute()
-        } catch (IOException ex) {
-            throw new RuntimeException("Graphviz dot utility must be installed and on path, or path set in graphviz.dot.executable. Download from http://graphviz.org ",ex)
-        } 
+        for(dotExe in ([config.graphviz.dot.executable] << DOT_EXECUTABLES).flatten()) {
+            try {
+                def process = (dotExe+" -T"+outputFormat).execute()
+                p = process
+                break;
+            } catch (IOException ex) {
+               // Try next
+            }
+        }
+
+        if(!p) {
+           throw new RuntimeException("Graphviz dot utility must be installed and on path, or path set in graphviz.dot.executable. Download from http://graphviz.org ")
+        }
 
         p.outputStream.withStream { stream ->
             stream << dot
